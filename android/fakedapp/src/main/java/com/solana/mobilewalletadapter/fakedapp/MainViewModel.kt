@@ -31,7 +31,6 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import kotlin.random.Random
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(UiState())
@@ -91,7 +90,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun requestAirdrop() = viewModelScope.launch {
         try {
-            RequestAirdropUseCase(TESTNET_RPC_URI, _uiState.value.publicKey!!)
+            RequestAirdropUseCase(MAINNET_RPC_URI, _uiState.value.publicKey!!)
             Log.d(TAG, "Airdrop request sent")
             showMessage(R.string.msg_airdrop_request_sent)
         } catch (e: RequestAirdropUseCase.AirdropFailedException) {
@@ -106,7 +105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun signTransactions(sender: StartActivityForResultSender, numTransactions: Int) = viewModelScope.launch {
         val latestBlockhash = viewModelScope.async(Dispatchers.IO) {
-            GetLatestBlockhashUseCase(TESTNET_RPC_URI)
+            GetLatestBlockhashUseCase(MAINNET_RPC_URI)
         }
 
         val signedTransactions = localAssociateAndExecute(sender, _uiState.value.walletUriBase) { client ->
@@ -121,7 +120,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@localAssociateAndExecute null
             }
             val transactions = Array(numTransactions) {
-                transactionUseCase.create(uiState.value.publicKey!!, blockhash)
+//                transactionUseCase.create(uiState.value.publicKey!!, blockhash)
+                SendSOLTransactionUseCase.create(uiState.value.publicKey!!, blockhash)
             }
             doSignTransactions(client, transactions)
         }
@@ -129,7 +129,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (signedTransactions != null) {
             val verified = signedTransactions.map { txn ->
                 try {
-                    transactionUseCase.verify(uiState.value.publicKey!!, txn)
+//                    transactionUseCase.verify(uiState.value.publicKey!!, txn)
+//                    MemoTransactionUseCase.verify(uiState.value.publicKey!!, txn)
                     true
                 } catch (e: IllegalArgumentException) {
                     Log.e(TAG, "Memo transaction signature verification failed", e)
@@ -146,7 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun authorizeAndSignTransactions(sender: StartActivityForResultSender) = viewModelScope.launch {
         val latestBlockhash = viewModelScope.async(Dispatchers.IO) {
-            GetLatestBlockhashUseCase(TESTNET_RPC_URI)
+            GetLatestBlockhashUseCase(MAINNET_RPC_URI)
         }
 
         val signedTransactions = localAssociateAndExecute(sender) { client ->
@@ -161,7 +162,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@localAssociateAndExecute null
             }
             val transactions = Array(1) {
-                transactionUseCase.create(uiState.value.publicKey!!, blockhash)
+//                transactionUseCase.create(uiState.value.publicKey!!, blockhash)
+                SendSOLTransactionUseCase.create(uiState.value.publicKey!!, blockhash)
             }
             doSignTransactions(client, transactions)
         }
@@ -169,7 +171,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (signedTransactions != null) {
             val verified = signedTransactions.map { txn ->
                 try {
-                    transactionUseCase.verify(uiState.value.publicKey!!, txn)
+//                    transactionUseCase.verify(uiState.value.publicKey!!, txn)
+//                    MemoTransactionUseCase.verify(uiState.value.publicKey!!, txn)
                     true
                 } catch (e: IllegalArgumentException) {
                     Log.e(TAG, "Memo transaction signature verification failed", e)
@@ -199,7 +202,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun signAndSendTransactions(sender: StartActivityForResultSender, numTransactions: Int) = viewModelScope.launch {
         val latestBlockhash = viewModelScope.async(Dispatchers.IO) {
-            GetLatestBlockhashUseCase(TESTNET_RPC_URI)
+            GetLatestBlockhashUseCase(MAINNET_RPC_URI)
         }
 
         val signatures = localAssociateAndExecute(sender, _uiState.value.walletUriBase) { client ->
@@ -214,7 +217,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@localAssociateAndExecute null
             }
             val transactions = Array(numTransactions) {
-                transactionUseCase.create(uiState.value.publicKey!!, blockhash)
+//                transactionUseCase.create(uiState.value.publicKey!!, blockhash)
+                SendSOLTransactionUseCase.create(uiState.value.publicKey!!, blockhash)
             }
             doSignAndSendTransactions(client, transactions, slot)
         }
@@ -243,7 +247,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Uri.parse("https://solana.com"),
                 Uri.parse("favicon.ico"),
                 "Solana",
-                ProtocolContract.CLUSTER_TESTNET
+                ProtocolContract.CLUSTER_MAINNET_BETA
             ).get()
             Log.d(TAG, "Authorized: $result")
             _uiState.update {
@@ -618,6 +622,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private const val LOCAL_ASSOCIATION_START_TIMEOUT_MS = 60000L // LocalAssociationScenario.start() has a shorter timeout; this is just a backup safety measure
         private const val LOCAL_ASSOCIATION_CLOSE_TIMEOUT_MS = 5000L
         private const val LOCAL_ASSOCIATION_CANCEL_AFTER_WALLET_CLOSED_TIMEOUT_MS = 5000L
+        private val MAINNET_RPC_URI = Uri.parse("https://api.mainnet-beta.solana.com")
         private val TESTNET_RPC_URI = Uri.parse("https://api.testnet.solana.com")
     }
 }
